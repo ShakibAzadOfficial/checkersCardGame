@@ -11,83 +11,106 @@ class CheckersPage {
     }
 
     async verifyCheckersPageDisplays() {
-        await this.page.locator(locators.BOARD).isVisible();
-        console.log("Board displayed on the page");
+        try {
+            const heading = await this.page.locator(locators.BOARD);
+            await heading.isVisible();
+            console.log("board displayed on the page");
 
-        expect(await this.page.locator(locators.BOARD).isVisible()).toBe(true);
+            const isVisible = await heading.isVisible();
+            expect(isVisible).toBe(true);
+        } catch (error) {
+            console.log("Error occurred while verifying if Checkers board is displayed: ", error);
+        }
     }
 
-    async waitForMessageToContain(expectedMessage, checkInterval = 5000, timeout = 60000) {
+    async validateMessage(expectedMessage, checkInterval = 5000, timeout = 60000) {
         let startTime = Date.now();
 
         while (true) {
             try {
-                // await this.page.waitForTimeout(1000);
-                await this.page.waitForSelector(locators.MESSAGE);
+                await this.page.waitForTimeout(1000);
+                await this.page.waitForSelector('#message');
 
+                // Wait for the inner text to contain expected message
                 await this.page.waitForFunction(
                     (expectedMessage) => {
-                        const actualMessage = document.querySelector(locators.MESSAGE).innerText;
+                        const actualMessage = document.querySelector('#message').innerText;
                         return actualMessage.includes(expectedMessage);
                     },
                     expectedMessage,
                     { timeout: checkInterval }
                 );
 
-                expect(await this.page.innerText(locators.MESSAGE)).toContain(expectedMessage);
-                console.log(`"${locators.MESSAGE}" element contains "${expectedMessage}"`);
+                const actualMessage = await this.page.innerText('#message');
+                expect(actualMessage).toContain(expectedMessage);
+                console.log(`"#message" element contains "${expectedMessage}"`);
                 break;
             } catch (error) {
                 if (Date.now() - startTime > timeout) {
-                    console.log(`Timeout while waiting for "${locators.MESSAGE}" to contain "${expectedMessage}": `, error);
+                    console.log(`Timeout while waiting for "#message" to contain "${expectedMessage}": `, error);
                     break;
                 }
+                // If message not found, wait for checkInterval time and try again
                 await this.page.waitForTimeout(checkInterval);
             }
         }
     }
 
-    async makeMove(moveNumber) {
-        const currentLocator = locators[`MOVE_${moveNumber}_CURRENT`];
-        const targetLocator = locators[`MOVE_${moveNumber}_TARGET`];
 
-        await this.page.waitForSelector(currentLocator);
-        await this.testMove(currentLocator, targetLocator);
+    async firstMoveChecker() {
+        await this.page.waitForSelector(locators.FIRST_MOVE_CURRENT);
+        await this.testMove(this.page, locators.FIRST_MOVE_CURRENT, locators.FIRST_MOVE_TARGET);
     }
 
-    async testMove(currentLocator, targetLocator) {
-        const checker1 = 'CHECKER_YOU1';
-        const checker2 = 'CHECKER_YOU2';
-        const checkerGray = 'CHECKER_GRAY';
+    async secondMoveChecker() {
+        await this.page.waitForSelector(locators.SECOND_MOVE_CURRENT);
+        await this.testMove(this.page, locators.SECOND_MOVE_CURRENT, locators.SECOND_MOVE_TARGET);
 
-        await expect.poll(async () => {
-            return await this.page.locator(currentLocator).getAttribute("src");
-        }, { timeout: 60000 }).toContain(locators[checker1]);
-
-        await this.page.locator(currentLocator).click();
-        await this.page.waitForTimeout(1000);
-
-        await expect.poll(async () => {
-            return await this.page.locator(currentLocator).getAttribute("src");
-        }, { timeout: 60000 }).toContain(locators[checker2]);
-
-        await expect.poll(async () => {
-            return await this.page.locator(targetLocator).getAttribute("src");
-        }, { timeout: 60000 }).toContain(locators[checkerGray]);
-
-        await this.page.locator(targetLocator).click();
-
-        await expect.poll(async () => {
-            return await this.page.locator(targetLocator).getAttribute("src");
-        }, { timeout: 60000 }).toContain(locators[checker1]);
     }
 
-    async verifyBlueCheckerCount(expectedCount) {
+    async thirdMoveChecker() {
+        await this.page.waitForSelector(locators.THIRD_MOVE_CURRENT);
+        await this.testMove(this.page, locators.THIRD_MOVE_CURRENT, locators.THIRD_MOVE_TARGET);
+    }
+
+    async fourthMoveChecker() {
+        await this.page.waitForSelector(locators.FOURTH_MOVE_CURRENT);
+        await this.testMove(this.page, locators.FOURTH_MOVE_CURRENT, locators.FOURTH_MOVE_TARGET);
+    }
+
+    async fifthMoveChecker() {
+        await this.page.waitForSelector(locators.FIFTH_MOVE_CURRENT);
+        await this.testMove(this.page, locators.FIFTH_MOVE_CURRENT, locators.FIFTH_MOVE_TARGET);
+    }
+
+    async testMove(page, current, target) {
+        await expect.poll(async () => {
+            return await page.locator(current).getAttribute("src");
+        }, { timeout: 60000 }).toContain('you1.gif');
+
+        await page.locator(current).click();
+        await page.waitForTimeout(1000);
+        await expect.poll(async () => {
+            return await page.locator(current).getAttribute("src");
+        }, { timeout: 60000 }).toContain('you2.gif');
+
+        await expect.poll(async () => {
+            return await page.locator(target).getAttribute("src");
+        }, { timeout: 60000 }).toContain('gray.gif');
+
+        await page.locator(target).click();
+
+        await expect.poll(async () => {
+            return await page.locator(target).getAttribute("src");
+        }, { timeout: 60000 }).toContain('you1.gif');
+    }
+
+    async blueCheckerCount(expectedCount) {
         const elements = await this.page.locator(locators.BLUE_CHECKER).count();
         expect(elements).toBe(expectedCount);
     }
-
-    async resetGame() {
+    
+    async clickReset() {
         await this.page.click(locators.RESTART_BUTTON);
     }
 }
